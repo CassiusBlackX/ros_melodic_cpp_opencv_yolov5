@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/nvidia/zal_ws/devel/setup.sh

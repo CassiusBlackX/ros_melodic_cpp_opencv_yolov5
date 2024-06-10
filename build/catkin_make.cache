@@ -1,0 +1,2 @@
+vision_opencv/cv_bridge:vision_opencv/image_geometry:vision_opencv/opencv_tests:vision_opencv/vision_opencv:zal_yolov5
+-DCATKIN_DEVEL_PREFIX=/home/nvidia/zal_ws/devel -DCMAKE_INSTALL_PREFIX=/home/nvidia/zal_ws/install -G Unix Makefiles

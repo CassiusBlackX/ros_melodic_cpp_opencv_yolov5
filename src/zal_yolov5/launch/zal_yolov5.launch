@@ -1,0 +1,8 @@
+<launch>
+    <!-- 启动yolov5检测节点 -->
+    <node name="zal_yolov5_node" pkg="zal_yolov5" type="zal_yolov5_node" output="screen">
+        <!-- 参数设置，是否使用CUDA -->
+        <param name="net_path" value="/home/nvidia/zal_ws/src/zal_yolov5/config/best.onnx" />
+        <param name="class_list_path" value="/home/nvidia/zal_ws/src/zal_yolov5/config/classes.txt" />
+        <param name="use_cuda" value="true" />    </node>
+</launch>
