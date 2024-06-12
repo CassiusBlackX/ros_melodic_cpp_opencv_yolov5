@@ -935,6 +935,19 @@ run_tests_image_geometry_gtest_image_geometry-utest-equi/fast:
 .PHONY : run_tests_image_geometry_gtest_image_geometry-utest-equi/fast
 
 #=============================================================================
+# Target rules for targets named video_stream_node
+
+# Build rule for target.
+video_stream_node: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 video_stream_node
+.PHONY : video_stream_node
+
+# fast build rule for target.
+video_stream_node/fast:
+	$(MAKE) -f zal_yolov5/CMakeFiles/video_stream_node.dir/build.make zal_yolov5/CMakeFiles/video_stream_node.dir/build
+.PHONY : video_stream_node/fast
+
+#=============================================================================
 # Target rules for targets named zal_yolov5_node
 
 # Build rule for target.
@@ -1513,6 +1526,7 @@ help:
 	@echo "... _run_tests_image_geometry_gtest_image_geometry-utest"
 	@echo "... _run_tests_image_geometry"
 	@echo "... run_tests_image_geometry_gtest_image_geometry-utest-equi"
+	@echo "... video_stream_node"
 	@echo "... zal_yolov5_node"
 	@echo "... zal_yolov5_genpy"
 	@echo "... mavros_msgs_generate_messages_eus"

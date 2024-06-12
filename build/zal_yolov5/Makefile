@@ -168,6 +168,21 @@ depend:
 .PHONY : depend
 
 # Convenience name for target.
+zal_yolov5/CMakeFiles/video_stream_node.dir/rule:
+	cd /home/nvidia/zal_ws/build && $(MAKE) -f CMakeFiles/Makefile2 zal_yolov5/CMakeFiles/video_stream_node.dir/rule
+.PHONY : zal_yolov5/CMakeFiles/video_stream_node.dir/rule
+
+# Convenience name for target.
+video_stream_node: zal_yolov5/CMakeFiles/video_stream_node.dir/rule
+
+.PHONY : video_stream_node
+
+# fast build rule for target.
+video_stream_node/fast:
+	cd /home/nvidia/zal_ws/build && $(MAKE) -f zal_yolov5/CMakeFiles/video_stream_node.dir/build.make zal_yolov5/CMakeFiles/video_stream_node.dir/build
+.PHONY : video_stream_node/fast
+
+# Convenience name for target.
 zal_yolov5/CMakeFiles/zal_yolov5_node.dir/rule:
 	cd /home/nvidia/zal_ws/build && $(MAKE) -f CMakeFiles/Makefile2 zal_yolov5/CMakeFiles/zal_yolov5_node.dir/rule
 .PHONY : zal_yolov5/CMakeFiles/zal_yolov5_node.dir/rule
@@ -752,6 +767,33 @@ zal_yolov5_gennodejs/fast:
 	cd /home/nvidia/zal_ws/build && $(MAKE) -f zal_yolov5/CMakeFiles/zal_yolov5_gennodejs.dir/build.make zal_yolov5/CMakeFiles/zal_yolov5_gennodejs.dir/build
 .PHONY : zal_yolov5_gennodejs/fast
 
+src/video_stream.o: src/video_stream.cpp.o
+
+.PHONY : src/video_stream.o
+
+# target to build an object file
+src/video_stream.cpp.o:
+	cd /home/nvidia/zal_ws/build && $(MAKE) -f zal_yolov5/CMakeFiles/video_stream_node.dir/build.make zal_yolov5/CMakeFiles/video_stream_node.dir/src/video_stream.cpp.o
+.PHONY : src/video_stream.cpp.o
+
+src/video_stream.i: src/video_stream.cpp.i
+
+.PHONY : src/video_stream.i
+
+# target to preprocess a source file
+src/video_stream.cpp.i:
+	cd /home/nvidia/zal_ws/build && $(MAKE) -f zal_yolov5/CMakeFiles/video_stream_node.dir/build.make zal_yolov5/CMakeFiles/video_stream_node.dir/src/video_stream.cpp.i
+.PHONY : src/video_stream.cpp.i
+
+src/video_stream.s: src/video_stream.cpp.s
+
+.PHONY : src/video_stream.s
+
+# target to generate assembly for a file
+src/video_stream.cpp.s:
+	cd /home/nvidia/zal_ws/build && $(MAKE) -f zal_yolov5/CMakeFiles/video_stream_node.dir/build.make zal_yolov5/CMakeFiles/video_stream_node.dir/src/video_stream.cpp.s
+.PHONY : src/video_stream.cpp.s
+
 src/zal_yolov5.o: src/zal_yolov5.cpp.o
 
 .PHONY : src/zal_yolov5.o
@@ -790,6 +832,7 @@ help:
 	@echo "... install"
 	@echo "... list_install_components"
 	@echo "... edit_cache"
+	@echo "... video_stream_node"
 	@echo "... zal_yolov5_node"
 	@echo "... zal_yolov5_genpy"
 	@echo "... mavros_msgs_generate_messages_eus"
@@ -831,6 +874,9 @@ help:
 	@echo "... zal_yolov5_generate_messages_nodejs"
 	@echo "... mavros_msgs_generate_messages_nodejs"
 	@echo "... zal_yolov5_gennodejs"
+	@echo "... src/video_stream.o"
+	@echo "... src/video_stream.i"
+	@echo "... src/video_stream.s"
 	@echo "... src/zal_yolov5.o"
 	@echo "... src/zal_yolov5.i"
 	@echo "... src/zal_yolov5.s"

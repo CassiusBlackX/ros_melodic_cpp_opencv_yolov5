@@ -7,6 +7,7 @@
 
 int main(int argc, char** argv)
 {
+    ROS_INFO("start!");
     ros::init(argc, argv, "image_publisher");
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
@@ -16,6 +17,10 @@ int main(int argc, char** argv)
     nh.getParam("camera_index", camera_index);
     nh.getParam("frame_height", frame_height);
     nh.getParam("frame_width", frame_width);
+
+    ROS_INFO("camera_index: %d", camera_index);
+    ROS_INFO("frame_height: %d", frame_height);
+    ROS_INFO("frame_width: %d", frame_width);
 
     cv::VideoCapture cap(camera_index);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, frame_height);

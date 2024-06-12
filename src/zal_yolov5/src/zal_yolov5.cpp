@@ -46,9 +46,9 @@ const std::vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 2
 
 const float INPUT_WIDTH = 640.0;
 const float INPUT_HEIGHT = 640.0;
-const float SCORE_THRESHOLD = 0.2;
+const float SCORE_THRESHOLD = 0.5;
 const float NMS_THRESHOLD = 0.4;
-const float CONFIDENCE_THRESHOLD = 0.4;
+const float CONFIDENCE_THRESHOLD = 0.5;
 
 struct Detection
 {
@@ -75,7 +75,6 @@ void detect(cv::Mat &image, cv::dnn::Net &net, std::vector<Detection> &output, c
     cv::dnn::blobFromImage(input_image, blob, 1./255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
     ROS_INFO("FINISH blobFromImage");
     net.setInput(blob);
-    ROS_INFO("FINISH net.setInput(blob);");
     std::vector<cv::Mat> outputs;
     net.forward(outputs, net.getUnconnectedOutLayersNames());
     ROS_INFO("SUCCESS forward");
@@ -85,7 +84,7 @@ void detect(cv::Mat &image, cv::dnn::Net &net, std::vector<Detection> &output, c
     
     float *data = (float *)outputs[0].data;
 
-    const int dimensions = 85;
+    const int dimensions = 9;
     const int rows = 25200;
     
     std::vector<int> class_ids;
@@ -121,7 +120,7 @@ void detect(cv::Mat &image, cv::dnn::Net &net, std::vector<Detection> &output, c
                 boxes.push_back(cv::Rect(left, top, width, height));
             }
         }
-        data += 85;
+        data += 9;
     }
     ROS_INFO("finish first for loop (rows) in detect function");
 
@@ -188,6 +187,7 @@ void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &net, const st
 
 int main(int argc, char **argv)
 {
+    ROS_INFO("start node zal_yolov5");
     ros::init(argc, argv, "zal_yolov5_node");
     ros::NodeHandle nh;
 
@@ -198,9 +198,9 @@ int main(int argc, char **argv)
     class_list_path = "/home/nvidia/zal_ws/src/zal_yolov5/config/classes.txt";
 
     // Get parameters from the parameter server
-    // nh.getParam("net_path", net_path);
-    // nh.getParam("class_list_path", class_list_path);
-    // nh.getParam("use_cuda", use_cuda);
+    nh.getParam("net_path", net_path);
+    nh.getParam("class_list_path", class_list_path);
+    nh.getParam("use_cuda", use_cuda);
 
     ROS_INFO("net_path: %s", net_path.c_str());
     ROS_INFO("class_list_path: %s", class_list_path.c_str());

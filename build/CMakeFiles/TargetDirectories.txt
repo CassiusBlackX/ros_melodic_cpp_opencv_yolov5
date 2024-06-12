@@ -146,6 +146,7 @@
 /home/nvidia/zal_ws/build/zal_yolov5/CMakeFiles/install.dir
 /home/nvidia/zal_ws/build/zal_yolov5/CMakeFiles/list_install_components.dir
 /home/nvidia/zal_ws/build/zal_yolov5/CMakeFiles/edit_cache.dir
+/home/nvidia/zal_ws/build/zal_yolov5/CMakeFiles/video_stream_node.dir
 /home/nvidia/zal_ws/build/zal_yolov5/CMakeFiles/zal_yolov5_node.dir
 /home/nvidia/zal_ws/build/zal_yolov5/CMakeFiles/zal_yolov5_genpy.dir
 /home/nvidia/zal_ws/build/zal_yolov5/CMakeFiles/mavros_msgs_generate_messages_eus.dir
