@@ -1,0 +1,9 @@
+<launch>
+    <!-- 启动yolov5检测节点 -->
+    <node name="copencv_cpp_yolov5_node" pkg="opencv_cpp_yolov5" type="opencv_cpp_yolov5_node">
+        <!-- 参数设置，是否使用CUDA -->
+        <param name="net_path" value="/path/to/onnx/files" />
+        <param name="class_list_path" value="/path/to/classes/files" />
+        <param name="use_cuda" value="true" />    
+    </node>
+</launch>
