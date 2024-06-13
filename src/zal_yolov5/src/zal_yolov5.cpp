@@ -70,42 +70,33 @@ void detect(cv::Mat &image, cv::dnn::Net &net, std::vector<Detection> &output, c
     cv::Mat blob;
 
     auto input_image = format_yolov5(image);
-    ROS_INFO("successfully transform the img");
     
     cv::dnn::blobFromImage(input_image, blob, 1./255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
-    ROS_INFO("FINISH blobFromImage");
     net.setInput(blob);
     std::vector<cv::Mat> outputs;
     net.forward(outputs, net.getUnconnectedOutLayersNames());
-    ROS_INFO("SUCCESS forward");
 
     float x_factor = input_image.cols / INPUT_WIDTH;
     float y_factor = input_image.rows / INPUT_HEIGHT;
     
     float *data = (float *)outputs[0].data;
 
-    const int dimensions = 9;
+    const int dimensions = 9;  // dimensions = class_num + 5
     const int rows = 25200;
     
     std::vector<int> class_ids;
     std::vector<float> confidences;
     std::vector<cv::Rect> boxes;
 
-    // FIXME 成功打印出forward了，问题出在这个部分！
     for (int i = 0; i < rows; ++i) {
         float confidence = data[4];
-        ROS_INFO("computed confidence");
         if (confidence >= CONFIDENCE_THRESHOLD) {
             float * classes_scores = data + 5;
-            ROS_INFO("initialise classes_scores");
             cv::Mat scores(1, className.size(), CV_32FC1, classes_scores);
-            ROS_INFO("initialise scores");
             cv::Point class_id;
             double max_class_score;
             minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
-            ROS_INFO("minMaxLoc");
             if (max_class_score > SCORE_THRESHOLD) {
-                ROS_INFO("entern max_class_score>SCORE_THRESHOLD");
                 confidences.push_back(confidence);
                 class_ids.push_back(class_id.x);
 
@@ -120,13 +111,11 @@ void detect(cv::Mat &image, cv::dnn::Net &net, std::vector<Detection> &output, c
                 boxes.push_back(cv::Rect(left, top, width, height));
             }
         }
-        data += 9;
+        data += dimensions;
     }
-    ROS_INFO("finish first for loop (rows) in detect function");
 
     std::vector<int> nms_result;
     cv::dnn::NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, nms_result);
-    ROS_INFO("initialize NMSBoxes");
     for (int i = 0; i < nms_result.size(); i++) {
         int idx = nms_result[i];
         Detection result;
@@ -147,10 +136,8 @@ void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &net, const st
     }
 
     cv::Mat frame = cv_ptr->image;
-    ROS_INFO("successfully get the frame");
     std::vector<Detection> output;
     detect(frame, net, output, class_list);
-    ROS_INFO("successfully detect the frame");
 
     zal_yolov5::BoundingBoxes bbox_msg;
     bbox_msg.header = msg->header;
@@ -176,19 +163,17 @@ void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &net, const st
         cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
         cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
     }
-    ROS_INFO("successfully generated the bbxs and drawing bbxs");
     bbox_pub.publish(bbox_msg);
-    ROS_INFO("success pub bbx");
 
     sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
     image_pub.publish(img_msg);
-    ROS_INFO("success pub annotated img");
 }
 
 int main(int argc, char **argv)
 {
-    ROS_INFO("start node zal_yolov5");
     ros::init(argc, argv, "zal_yolov5_node");
+    
+    ROS_WARN("start node zal_yolov5");
     ros::NodeHandle nh;
 
     std::string net_path, class_list_path;
@@ -203,17 +188,9 @@ int main(int argc, char **argv)
     nh.getParam("use_cuda", use_cuda);
 
     ROS_INFO("net_path: %s", net_path.c_str());
+    ROS_WARN("net_path: %s", net_path.c_str());
     ROS_INFO("class_list_path: %s", class_list_path.c_str());
-
-    // // Resolve relative paths
-    // if (net_path[0] != '/')
-    // {
-    //     net_path = ros::package::getPath("zal_yolov5") + "/" + net_path;
-    // }
-    // if (class_list_path[0] != '/')
-    // {
-    //     class_list_path = ros::package::getPath("zal_yolov5") + "/" + class_list_path;
-    // }
+    ROS_WARN("class_list_path: %s", class_list_path.c_str());
 
     std::vector<std::string> class_list = load_class_list(class_list_path);
 
