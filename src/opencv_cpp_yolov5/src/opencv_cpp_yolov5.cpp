@@ -174,7 +174,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "opencv_cpp_yolov5_node");
     
     ROS_WARN("start node opencv_cpp_yolov5");
-    ros::NodeHandle nh;
+    ros::NodeHandle nh("~");
 
     std::string net_path, class_list_path;
     bool use_cuda = true;
@@ -183,6 +183,9 @@ int main(int argc, char **argv)
     nh.getParam("net_path", net_path);
     nh.getParam("class_list_path", class_list_path);
     nh.getParam("use_cuda", use_cuda);
+
+    // net_path = "/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/best.onnx";
+    // class_list_path = "/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/classes.txt";
 
     ROS_INFO("net_path: %s", net_path.c_str());
     ROS_WARN("net_path: %s", net_path.c_str());
@@ -198,12 +201,12 @@ int main(int argc, char **argv)
 
     image_transport::ImageTransport it(nh);
     ROS_INFO("initialize image_transport");
-    image_transport::Publisher image_pub = it.advertise("detected_image", 1);
+    image_transport::Publisher image_pub = it.advertise("/opencv_cpp_yolov5/detected_image", 1);
     ROS_INFO("initialize image_pub");
-    ros::Publisher bbox_pub = nh.advertise<opencv_cpp_yolov5::BoundingBoxes>("bounding_boxes", 1);
+    ros::Publisher bbox_pub = nh.advertise<opencv_cpp_yolov5::BoundingBoxes>("/opencv_cpp_yolov5/bounding_boxes", 1);
     ROS_INFO("initialize bbox_pub");
 
-    image_transport::Subscriber sub = it.subscribe("usb_cam/image_raw", 1,
+    image_transport::Subscriber sub = it.subscribe("/usb_cam/image_raw", 1,
         boost::bind(image_cb, _1, boost::ref(net), boost::ref(class_list), boost::ref(bbox_pub), boost::ref(image_pub)));
 
     ros::spin();

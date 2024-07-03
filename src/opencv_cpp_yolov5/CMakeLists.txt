@@ -59,6 +59,8 @@ add_message_files(
   FILES 
   BoundingBox.msg
   BoundingBoxes.msg
+  CircleDetectResult.msg
+  CircleInfo.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -143,7 +145,9 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node src/opencv_cpp_yolov5.cpp)
 add_executable(video_stream_node src/video_stream.cpp)
+add_executable(hough_circle_detector_node src/hough_circle_detector.cpp)
 target_link_libraries(video_stream_node ${catkin_LIBRARIES})
+target_link_libraries(hough_circle_detector_node ${catkin_LIBRARIES})
 
 
 ## Rename C++ executable without prefix
