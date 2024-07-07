@@ -46,9 +46,9 @@ const std::vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 2
 
 const float INPUT_WIDTH = 640.0;
 const float INPUT_HEIGHT = 640.0;
-const float SCORE_THRESHOLD = 0.5;
-const float NMS_THRESHOLD = 0.4;
-const float CONFIDENCE_THRESHOLD = 0.5;
+float SCORE_THRESHOLD = 0.7;
+float NMS_THRESHOLD = 0.4;
+float CONFIDENCE_THRESHOLD = 0.79;
 
 struct Detection
 {
@@ -183,6 +183,9 @@ int main(int argc, char **argv)
     nh.getParam("net_path", net_path);
     nh.getParam("class_list_path", class_list_path);
     nh.getParam("use_cuda", use_cuda);
+    nh.getParam("score_threshold", SCORE_THRESHOLD);
+    nh.getParam("nms_threshold", NMS_THRESHOLD);
+    nh.getParam("confidence_threshold", CONFIDENCE_THRESHOLD);
 
     // net_path = "/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/best.onnx";
     // class_list_path = "/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/classes.txt";
@@ -191,6 +194,9 @@ int main(int argc, char **argv)
     ROS_WARN("net_path: %s", net_path.c_str());
     ROS_INFO("class_list_path: %s", class_list_path.c_str());
     ROS_WARN("class_list_path: %s", class_list_path.c_str());
+    ROS_WARN("score_threshold: %f", SCORE_THRESHOLD);
+    ROS_WARN("nms_threshold: %f", NMS_THRESHOLD);
+    ROS_WARN("confidence_threshold: %f", CONFIDENCE_THRESHOLD);
 
     std::vector<std::string> class_list = load_class_list(class_list_path);
 

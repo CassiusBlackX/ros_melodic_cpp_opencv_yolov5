@@ -4,6 +4,9 @@
         <!-- 参数设置，是否使用CUDA -->
         <param name="net_path" value="/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/best.onnx" />
         <param name="class_list_path" value="/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/classes.txt" />
-        <param name="use_cuda" value="true" />    
+        <param name="use_cuda" value="true" />   
+        <param name="nms_threshold" value="0.5"/>
+        <param name="score_threshold" value="0.7"/>
+        <param name="confidence_threshold" value="0.79"/>
     </node>
 </launch>
