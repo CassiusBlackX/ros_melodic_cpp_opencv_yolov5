@@ -1,5 +1,5 @@
 # ros_melodic_cpp_opencv_yolov5
-this is a catkin workspace which built for visual detection.
+this is a catkin workspace which built for visual detection, originally for ros melodic, but can also work on ros noetic with a little modification.
 
 ## cunstruction
 + `vision_opencv` is the official package for `cv_bridge` compatible, and should not be changed
@@ -18,3 +18,15 @@ this is a catkin workspace which built for visual detection.
 + `opencv_cpp_yolov5/circle_detect_result_img` is the annotated image by hough_circle
 + `opencv_cpp_yolov5/circle_detect_result` is the circle info by hough_circle
 
+## NOTE
++ it is highly recommended to manually `catkin_create_workspace` to create a workspace, then copy the `src` directory into the workspace, and finally `catkin_make`. Or else there is chance that when trying to `find_package` in other workspace, `cmake` would fail to find `opencv_cpp_yolov5` even with the right environment
++ for ros noetic, you should modify `vision_opencv/cv_bridge/src/module.hpp` to its original form
+
+```cpp
+static void * do_numpy_import( )  // uncomment this line
+// static void do_numpy_import( )  // comment or delete this line
+{
+    import_array( );
+    return nullptr;  // uncomment this line
+}
+```
