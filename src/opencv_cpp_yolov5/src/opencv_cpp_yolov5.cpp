@@ -1,17 +1,26 @@
+// #define USE_RESNET
+
 #include <fstream>
 #include <string>
-#include <filesystem>
+#include <chrono>
 #include <ros/ros.h>
 #include <ros/package.h>
+#include <ros/console.h>
+#include <log4cxx/logger.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <opencv2/opencv.hpp>
 #include <std_msgs/Header.h>
+#ifdef USE_RESNET
+#include <opencv_cpp_yolov5/BoundingBoxResNet.h>
+#include <opencv_cpp_yolov5/BoundingBoxesResNet.h>
+#define BoundingBox BoundingBoxResNet
+#define BoundingBoxes BoundingBoxesResNet
+#else
 #include <opencv_cpp_yolov5/BoundingBox.h>
 #include <opencv_cpp_yolov5/BoundingBoxes.h>
-
-namespace fs = std::filesystem;
+#endif
 
 std::vector<std::string> load_class_list(const std::string &class_list_path)
 {
@@ -45,6 +54,7 @@ void load_yolo(cv::dnn::Net &yolo, const std::string &net_path, bool is_cuda)
     yolo = result;
 }
 
+#ifdef USE_RESNET
 void load_resnet(cv::dnn::Net &net, const std::string &net_path, bool is_cuda) {
     auto result = cv::dnn::readNetFromONNX(net_path);
     if (is_cuda)
@@ -63,21 +73,31 @@ void load_resnet(cv::dnn::Net &net, const std::string &net_path, bool is_cuda) {
     }
     net = result;
 }
+#endif
 
+const std::vector<cv::Scalar> boundingBoxColors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
 
-const std::vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
+const float YOLO_INPUT_WIDTH = 640.0;
+const float YOLO_INPUT_HEIGHT = 640.0;
 
-const float INPUT_WIDTH = 640.0;
-const float INPUT_HEIGHT = 640.0;
-float SCORE_THRESHOLD = 0.7;
+#ifdef USE_RESNET
+const float RESNET_INPUT_WIDTH = 224.0;
+const float RESNET_INPUT_HEIGHT = 224.0;
+#endif
+
 float NMS_THRESHOLD = 0.4;
-float CONFIDENCE_THRESHOLD = 0.79;
+float CONFIDENCE_THRESHOLD = 0.79;  // filter out boxes with confidence lower than this
+float SCORE_THRESHOLD = 0.8;  // filter out classes with score lower than this
 
 struct Detection
 {
     int class_id;
     float confidence;
     cv::Rect box;
+    #ifdef USE_RESNET
+    int resnet_class_id;
+    float resnet_confidence;
+    #endif
 };
 
 cv::Mat format_yolov5(const cv::Mat &source) {
@@ -89,18 +109,22 @@ cv::Mat format_yolov5(const cv::Mat &source) {
     return result;
 }
 
-void detect(cv::Mat &image, cv::dnn::Net &yolo, cv::dnn::Net &resnet, std::vector<Detection> &output, const std::vector<std::string> &className) {
+void detect(cv::Mat &image, cv::dnn::Net &yolo, std::vector<Detection> &output, const std::vector<std::string> &className
+#ifdef USE_RESNET
+, cv::dnn::Net &resnet
+#endif
+) {
     cv::Mat blob;
 
     auto input_image = format_yolov5(image);
     
-    cv::dnn::blobFromImage(input_image, blob, 1./255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
+    cv::dnn::blobFromImage(input_image, blob, 1./255., cv::Size(YOLO_INPUT_WIDTH, YOLO_INPUT_HEIGHT), cv::Scalar(), true, false);
     yolo.setInput(blob);
     std::vector<cv::Mat> outputs;
     yolo.forward(outputs, yolo.getUnconnectedOutLayersNames());
 
-    float x_factor = input_image.cols / INPUT_WIDTH;
-    float y_factor = input_image.rows / INPUT_HEIGHT;
+    float x_factor = input_image.cols / YOLO_INPUT_WIDTH;
+    float y_factor = input_image.rows / YOLO_INPUT_HEIGHT;
     
     float *data = (float *)outputs[0].data;
 
@@ -145,30 +169,42 @@ void detect(cv::Mat &image, cv::dnn::Net &yolo, cv::dnn::Net &resnet, std::vecto
         result.class_id = class_ids[idx];
         result.confidence = confidences[idx];
         result.box = boxes[idx];
-        output.push_back(result);
 
+        #ifdef USE_RESNET
         // crop bbx and use resnet to classify again, for higher accuracy
         cv::Mat crop = image(result.box).clone();
-        cv::resize(crop, crop, cv::Size(224, 224));  // ResNet input is 224*224
-        cv::Mat reset_blob;
-        cv::dnn::blobFromImage(crop, reset_blob, 1./255., cv::Size(224, 224), cv::Scalar(), true, false);  //BUG not sure about the 3rd parameter
-        resnet.setInput(reset_blob);
+        cv::resize(crop, crop, cv::Size(RESNET_INPUT_WIDTH, RESNET_INPUT_HEIGHT));  // ResNet input is 224*224
+        cv::Mat resnet_blob;
+        cv::dnn::blobFromImage(crop, resnet_blob, 1./255., cv::Size(RESNET_INPUT_WIDTH, RESNET_INPUT_HEIGHT), cv::Scalar(), true, false);
+        resnet.setInput(resnet_blob);
         cv::Mat resnet_output = resnet.forward();  
         // resnet.forward(resnet_output, resnet.getUnconnectedOutLayersNames());
 
         // get the class id
-        cv::Point class_id;
+        cv::Point resnet_class_id;
         double max_class_score;
-        minMaxLoc(resnet_output, 0, &max_class_score, 0, &class_id);
-        ROS_INFO("class_id: %d", class_id.x);
-        ROS_INFO("max_class_score: %f", max_class_score);
+        minMaxLoc(resnet_output, 0, &max_class_score, 0, &resnet_class_id);
 
-        // judge result from yolo and resnet
-        // TODO
+        if (resnet_class_id.x != result.class_id) {
+            ROS_WARN("resnet_class_id: %d, yolo.class_id: %d", resnet_class_id.x, result.class_id);
+            ROS_WARN("resnet_confidence: %f, yolo_confidence: %f", max_class_score, result.confidence);
+        } 
+        result.resnet_class_id = resnet_class_id.x;
+        result.resnet_confidence = max_class_score;
+       #endif
+        
+        output.push_back(result);
     }
 }
 
-void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const std::vector<std::string> &class_list, ros::Publisher &bbox_pub, image_transport::Publisher &image_pub) {
+void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const std::vector<std::string> &class_list, ros::Publisher &bbox_pub, image_transport::Publisher &image_pub
+#ifdef USE_RESNET
+, cv::dnn::Net &resnet
+#endif
+) {
+    // record time
+    auto start_time = std::chrono::steady_clock::now();
+
     cv_bridge::CvImagePtr cv_ptr;
     try {
         cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -179,7 +215,11 @@ void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const s
 
     cv::Mat frame = cv_ptr->image;
     std::vector<Detection> output;
-    detect(frame, yolo, output, class_list);
+    detect(frame, yolo, output, class_list
+    #ifdef USE_RESNET
+    , resnet
+    #endif
+    );
 
     opencv_cpp_yolov5::BoundingBoxes bbox_msg;
     bbox_msg.header = msg->header;
@@ -189,9 +229,17 @@ void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const s
         auto detection = output[i];
         auto box = detection.box;
         auto classId = detection.class_id;
+        #ifdef USE_RESNET
+        auto resnet_classId = detection.resnet_class_id;
+        auto resnet_confidence = detection.resnet_confidence;
+        #endif
 
         opencv_cpp_yolov5::BoundingBox bbox;
         bbox.Class = class_list[detection.class_id];
+        #ifdef USE_RESNET
+        bbox.resnet_class = class_list[detection.resnet_class_id];
+        bbox.resnet_probability = detection.resnet_confidence;
+        #endif
         bbox.probability = detection.confidence;
         bbox.xmin = box.x;
         bbox.ymin = box.y;
@@ -199,41 +247,63 @@ void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const s
         bbox.ymax = box.y + box.height;
         bbox_msg.bounding_boxes.push_back(bbox);
 
-        const auto color = colors[classId % colors.size()];
+        const auto color = boundingBoxColors[classId % boundingBoxColors.size()];
         cv::rectangle(frame, box, color, 3);
 
         cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
-        cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        std::string label;
+        #ifdef USE_RESNET
+        // label = (classId == resnet_classId) ? (class_list[classId] + " (" + std::to_string(detection.confidence) + ")") : ("YOlO: " + class_list[classId] + " (" + std::to_string(detection.confidence) + ") ResNet: " + class_list[resnet_classId] + " (" + std::to_string(detection.resnet_confidence) + ")");
+        label = "YOlO: " + class_list[classId] + " (" + std::to_string(detection.confidence) + ")\n ResNet: " + class_list[resnet_classId] + " (" + std::to_string(detection.resnet_confidence) + ")";
+        #else
+        label = class_list[classId] + " (" + std::to_string(detection.confidence) + ")";
+        #endif
+        cv::putText(frame, label.c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
     }
     bbox_pub.publish(bbox_msg);
 
     sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
     image_pub.publish(img_msg);
+
+    // record time
+    auto end_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+    float fps = 1.0 / elapsed_time.count();
+    ROS_WARN("FPS: %f", fps);
 }
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "opencv_cpp_yolov5_node");
     
-    ROS_WARN("start node opencv_cpp_yolov5");
+    ROS_INFO("start node opencv_cpp_yolov5");
     ros::NodeHandle nh("~");
 
-    std::string net_path, class_list_path;
+    // if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info)) {
+    //     ros::console::notifyLoggerLevelsChanged();
+    // }
+
+    log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME)->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
+    ros::console::notifyLoggerLevelsChanged();
+
+    std::string yolo_path, resnet_path, class_list_path;
     bool use_cuda = true;
 
     // Get parameters from the parameter server
-    nh.getParam("net_path", net_path);
+    nh.getParam("yolo_path", yolo_path);
+    #ifdef USE_RESNET
+    nh.getParam("resnet_path", resnet_path);
+    #endif
     nh.getParam("class_list_path", class_list_path);
     nh.getParam("use_cuda", use_cuda);
     nh.getParam("score_threshold", SCORE_THRESHOLD);
     nh.getParam("nms_threshold", NMS_THRESHOLD);
     nh.getParam("confidence_threshold", CONFIDENCE_THRESHOLD);
 
-    // net_path = "/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/best.onnx";
-    // class_list_path = "/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/classes.txt";
-
-    ROS_INFO("net_path: %s", net_path.c_str());
-    ROS_WARN("net_path: %s", net_path.c_str());
+    ROS_INFO("yolo_path: %s", yolo_path.c_str());
+    #ifdef USE_RESNET
+    ROS_WARN("resnet_path: %s", resnet_path.c_str());
+    #endif
     ROS_INFO("class_list_path: %s", class_list_path.c_str());
     ROS_WARN("class_list_path: %s", class_list_path.c_str());
     ROS_WARN("score_threshold: %f", SCORE_THRESHOLD);
@@ -243,7 +313,11 @@ int main(int argc, char **argv)
     std::vector<std::string> class_list = load_class_list(class_list_path);
 
     cv::dnn::Net yolo;
-    load_yolo(yolo, net_path, use_cuda);
+    load_yolo(yolo, yolo_path, use_cuda);
+    #ifdef USE_RESNET
+    cv::dnn::Net resnet;
+    load_resnet(resnet, resnet_path, use_cuda);
+    #endif
 
     ROS_INFO("finish load_yolo");
 
@@ -254,8 +328,12 @@ int main(int argc, char **argv)
     ros::Publisher bbox_pub = nh.advertise<opencv_cpp_yolov5::BoundingBoxes>("/opencv_cpp_yolov5/bounding_boxes", 1);
     ROS_INFO("initialize bbox_pub");
 
-    image_transport::Subscriber sub = it.subscribe("/usb_cam/image_raw", 1,
-        boost::bind(image_cb, _1, boost::ref(yolo), boost::ref(class_list), boost::ref(bbox_pub), boost::ref(image_pub)));
+    image_transport::Subscriber sub = it.subscribe("/video_stream_node/image_raw", 1,
+        boost::bind(image_cb, _1, boost::ref(yolo), boost::ref(class_list), boost::ref(bbox_pub), boost::ref(image_pub)
+        #ifdef USE_RESNET
+        , boost::ref(resnet)
+        #endif
+        ));
 
     ros::spin();
 

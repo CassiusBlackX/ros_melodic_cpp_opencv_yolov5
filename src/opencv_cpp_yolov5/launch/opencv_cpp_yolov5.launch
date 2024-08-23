@@ -2,11 +2,13 @@
     <!-- 启动yolov5检测节点 -->
     <node name="copencv_cpp_yolov5_node" pkg="opencv_cpp_yolov5" type="opencv_cpp_yolov5_node">
         <!-- 参数设置，是否使用CUDA -->
-        <param name="net_path" value="/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/best.onnx" />
-        <param name="class_list_path" value="/home/nvidia/zal_ws/src/opencv_cpp_yolov5/config/classes.txt" />
+        <param name="yolo_path" value="$(find opencv_cpp_yolov5)/config/yolov5_0620.onnx" />
+        <param name="resnet_path" value="$(find opencv_cpp_yolov5)/config/resnet50_0823.onnx" />
+        <param name="class_list_path" value="$(find opencv_cpp_yolov5)/config/classes.txt" />
         <param name="use_cuda" value="true" />   
-        <param name="nms_threshold" value="0.5"/>
-        <param name="score_threshold" value="0.7"/>
-        <param name="confidence_threshold" value="0.79"/>
+        <param name="nms_threshold" value="0.35"/>
+        <param name="confidence_threshold" value="0.6"/>
+        <param name="score_threshold" value="0.65"/>
+        <param name="ROSCONSOLE_CONFIG_FILE" value="$(find opencv_cpp_yolov5)/config/rosconsole.config" />
     </node>
 </launch>

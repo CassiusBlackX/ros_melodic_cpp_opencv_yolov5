@@ -59,6 +59,8 @@ add_message_files(
   FILES 
   BoundingBox.msg
   BoundingBoxes.msg
+  BoundingBoxResNet.msg
+  BoundingBoxesResNet.msg
   CircleDetectResult.msg
   CircleInfo.msg
 )
