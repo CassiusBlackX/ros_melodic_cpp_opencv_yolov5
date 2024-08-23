@@ -1,5 +1,6 @@
 #include <fstream>
 #include <string>
+#include <filesystem>
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <image_transport/image_transport.h>
@@ -9,6 +10,8 @@
 #include <std_msgs/Header.h>
 #include <opencv_cpp_yolov5/BoundingBox.h>
 #include <opencv_cpp_yolov5/BoundingBoxes.h>
+
+namespace fs = std::filesystem;
 
 std::vector<std::string> load_class_list(const std::string &class_list_path)
 {
@@ -22,7 +25,7 @@ std::vector<std::string> load_class_list(const std::string &class_list_path)
     return class_list;
 }
 
-void load_net(cv::dnn::Net &net, const std::string &net_path, bool is_cuda)
+void load_yolo(cv::dnn::Net &yolo, const std::string &net_path, bool is_cuda)
 {
     auto result = cv::dnn::readNet(net_path);
     if (is_cuda)
@@ -39,8 +42,28 @@ void load_net(cv::dnn::Net &net, const std::string &net_path, bool is_cuda)
         result.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
         result.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
     }
+    yolo = result;
+}
+
+void load_resnet(cv::dnn::Net &net, const std::string &net_path, bool is_cuda) {
+    auto result = cv::dnn::readNetFromONNX(net_path);
+    if (is_cuda)
+    {
+        ROS_INFO("Attempting to use CUDA\n");
+        result.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
+        ROS_INFO("success setPreferableBackend");
+        result.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA_FP16);
+        ROS_INFO("success setPreferableTarget");
+    }
+    else
+    {
+        ROS_INFO("Running on CPU\n");
+        result.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+        result.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+    }
     net = result;
 }
+
 
 const std::vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
 
@@ -66,15 +89,15 @@ cv::Mat format_yolov5(const cv::Mat &source) {
     return result;
 }
 
-void detect(cv::Mat &image, cv::dnn::Net &net, std::vector<Detection> &output, const std::vector<std::string> &className) {
+void detect(cv::Mat &image, cv::dnn::Net &yolo, cv::dnn::Net &resnet, std::vector<Detection> &output, const std::vector<std::string> &className) {
     cv::Mat blob;
 
     auto input_image = format_yolov5(image);
     
     cv::dnn::blobFromImage(input_image, blob, 1./255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
-    net.setInput(blob);
+    yolo.setInput(blob);
     std::vector<cv::Mat> outputs;
-    net.forward(outputs, net.getUnconnectedOutLayersNames());
+    yolo.forward(outputs, yolo.getUnconnectedOutLayersNames());
 
     float x_factor = input_image.cols / INPUT_WIDTH;
     float y_factor = input_image.rows / INPUT_HEIGHT;
@@ -123,10 +146,29 @@ void detect(cv::Mat &image, cv::dnn::Net &net, std::vector<Detection> &output, c
         result.confidence = confidences[idx];
         result.box = boxes[idx];
         output.push_back(result);
+
+        // crop bbx and use resnet to classify again, for higher accuracy
+        cv::Mat crop = image(result.box).clone();
+        cv::resize(crop, crop, cv::Size(224, 224));  // ResNet input is 224*224
+        cv::Mat reset_blob;
+        cv::dnn::blobFromImage(crop, reset_blob, 1./255., cv::Size(224, 224), cv::Scalar(), true, false);  //BUG not sure about the 3rd parameter
+        resnet.setInput(reset_blob);
+        cv::Mat resnet_output = resnet.forward();  
+        // resnet.forward(resnet_output, resnet.getUnconnectedOutLayersNames());
+
+        // get the class id
+        cv::Point class_id;
+        double max_class_score;
+        minMaxLoc(resnet_output, 0, &max_class_score, 0, &class_id);
+        ROS_INFO("class_id: %d", class_id.x);
+        ROS_INFO("max_class_score: %f", max_class_score);
+
+        // judge result from yolo and resnet
+        // TODO
     }
 }
 
-void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &net, const std::vector<std::string> &class_list, ros::Publisher &bbox_pub, image_transport::Publisher &image_pub) {
+void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const std::vector<std::string> &class_list, ros::Publisher &bbox_pub, image_transport::Publisher &image_pub) {
     cv_bridge::CvImagePtr cv_ptr;
     try {
         cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -137,7 +179,7 @@ void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &net, const st
 
     cv::Mat frame = cv_ptr->image;
     std::vector<Detection> output;
-    detect(frame, net, output, class_list);
+    detect(frame, yolo, output, class_list);
 
     opencv_cpp_yolov5::BoundingBoxes bbox_msg;
     bbox_msg.header = msg->header;
@@ -200,10 +242,10 @@ int main(int argc, char **argv)
 
     std::vector<std::string> class_list = load_class_list(class_list_path);
 
-    cv::dnn::Net net;
-    load_net(net, net_path, use_cuda);
+    cv::dnn::Net yolo;
+    load_yolo(yolo, net_path, use_cuda);
 
-    ROS_INFO("finish load_net");
+    ROS_INFO("finish load_yolo");
 
     image_transport::ImageTransport it(nh);
     ROS_INFO("initialize image_transport");
@@ -213,7 +255,7 @@ int main(int argc, char **argv)
     ROS_INFO("initialize bbox_pub");
 
     image_transport::Subscriber sub = it.subscribe("/usb_cam/image_raw", 1,
-        boost::bind(image_cb, _1, boost::ref(net), boost::ref(class_list), boost::ref(bbox_pub), boost::ref(image_pub)));
+        boost::bind(image_cb, _1, boost::ref(yolo), boost::ref(class_list), boost::ref(bbox_pub), boost::ref(image_pub)));
 
     ros::spin();
 
