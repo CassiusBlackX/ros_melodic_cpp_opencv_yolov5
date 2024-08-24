@@ -2,7 +2,7 @@
 this is a catkin workspace which built for visual detection, originally for ros melodic, but can also work on ros noetic with a little modification.
 
 ## cunstruction
-+ `vision_opencv` is the official package for `cv_bridge` compatible, and should not be changed
++ `vision_opencv` is the official package for [`cv_bridge`](https://github.com/ros-perception/vision_opencv/tree/noetic) compatible, and should not be changed
 + `opencv_cpp_yolov5` is the customed package
   + `src/opencv_cpp_yolov5 node` is the node subscribing images from usb_cam and use yolov5 to detect the image
   + `src/hough_circle_detector` is the node subscribing images from usb_cam and use hough_circle to find the most likely circle in the image
@@ -34,6 +34,23 @@ static void * do_numpy_import( )  // uncomment this line
 ```
 
 ## new features
+### ResNet double check
 in `opencv_cpp_yolov5/src/opencv_cpp_yolov5.cpp`, there is an macro named `USE_RESNET`, if the macro is defined, you should pass in the onnx form of resnet50 weight path(recommended) or other model weight. and before publishing messages, we will compare the inference results by YOLO and resnet, where resnet uses the cropped image from YOLO.
 
 in this way, when YOLO captured a bounding box but give out an incorrect classification, resnet will give another answer, and you should determine whose answer you are going to adopt.
+
+to activate this feature, use `catkin_make -DDEFINITIONS=-DUSE_RESNET` to compile the workspace, and remember add the weights path of resnet onnx form to `opencv_cpp_yolov5.launch`
+
+### double video stream
+in case the device itself is equipped with two cameras, node `opencv_cpp_yolov5` can process two video_streams simontaneously. 
++ to do so, you should
+  + launch `usb_cam_down.launch` and `usb_cam_front.launch` instead of `usb_cam.launch`, and it necessary, you should edit the device index in the launch file if necessary.
+  + use `catkin_make -DDEFINITIONS=-DDOUBLE_VIDEO_STREAMS` to compile the workspace
++ subscibe messages
+  + `/usb_cam_front/image_raw`, images from the camera in the front of the device
+  + `/usb_cam_down/image_raw`, images from the camera at the buttom of the device
++ published messages
+  + `/opencv_cpp_yolov5/detected_image_front`
+  + `/opencv_cpp_yolov5/detected_image_down`
+  + `/opencv_cpp_yolov5/bounding_boxes_front`
+  + `/opencv_cpp_yolov5/bounding_boxes_down`

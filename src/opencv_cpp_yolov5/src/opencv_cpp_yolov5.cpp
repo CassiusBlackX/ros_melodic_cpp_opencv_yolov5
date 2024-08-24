@@ -1,4 +1,5 @@
 // #define USE_RESNET
+// #define DOUBLE_VIDEO_STREAMS
 
 #include <fstream>
 #include <string>
@@ -191,7 +192,7 @@ void detect(cv::Mat &image, cv::dnn::Net &yolo, std::vector<Detection> &output, 
         } 
         result.resnet_class_id = resnet_class_id.x;
         result.resnet_confidence = max_class_score;
-       #endif
+        #endif
         
         output.push_back(result);
     }
@@ -323,6 +324,8 @@ int main(int argc, char **argv)
 
     image_transport::ImageTransport it(nh);
     ROS_INFO("initialize image_transport");
+
+    #ifndef DOUBLE_VIDEO_STREAMS
     image_transport::Publisher image_pub = it.advertise("/opencv_cpp_yolov5/detected_image", 1);
     ROS_INFO("initialize image_pub");
     ros::Publisher bbox_pub = nh.advertise<opencv_cpp_yolov5::BoundingBoxes>("/opencv_cpp_yolov5/bounding_boxes", 1);
@@ -334,6 +337,28 @@ int main(int argc, char **argv)
         , boost::ref(resnet)
         #endif
         ));
+    #else 
+    image_transport::Publisher image_pub_front = it.advertise("/opencv_cpp_yolov5/detected_image_front", 1);
+    image_transport::Publisher image_pub_down = it.advertise("/opencv_cpp_yolov5/detected_image_down", 1);
+    ROS_INFO("initialize image_pub");
+    ros::Publisher bbox_pub_front = nh.advertise<opencv_cpp_yolov5::BoundingBoxes>("/opencv_cpp_yolov5/bounding_boxes_front", 1);
+    ros::Publisher bbox_pub_down = nh.advertise<opencv_cpp_yolov5::BoundingBoxes>("/opencv_cpp_yolov5/bounding_boxes_down", 1);
+    ROS_INFO("initialize bbox_pub");
+
+    image_transport::Subscriber sub_front = it.subscribe("/usb_cam_front/image_raw", 1,
+        boost::bind(image_cb, _1, boost::ref(yolo), boost::ref(class_list), boost::ref(bbox_pub_front), boost::ref(image_pub_front)
+        #ifdef USE_RESNET
+        , boost::ref(resnet)
+        #endif
+        ));
+    image_transport::Subscriber sub_down = it.subscribe("/usb_cam_down/image_raw", 1,
+        boost::bind(image_cb, _1, boost::ref(yolo), boost::ref(class_list), boost::ref(bbox_pub_down), boost::ref(image_pub_down)
+        #ifdef USE_RESNET
+        , boost::ref(resnet)
+        #endif
+        ));
+    #endif
+
 
     ros::spin();
 
