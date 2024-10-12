@@ -4,6 +4,8 @@
 #include <fstream>
 #include <string>
 #include <chrono>
+#include <vector>
+#include <array>
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <ros/console.h>
@@ -23,14 +25,21 @@
 #include <opencv_cpp_yolov5/BoundingBoxes.h>
 #endif
 
-std::vector<std::string> load_class_list(const std::string &class_list_path)
+static constexpr size_t NUM_CLASSES = 4;
+std::array<std::string, NUM_CLASSES> load_class_list(const std::string &class_list_path)
 {
-    std::vector<std::string> class_list;
+    std::array<std::string, NUM_CLASSES> class_list;
     std::ifstream ifs(class_list_path);
     std::string line;
+    size_t index = 0;
     while (getline(ifs, line))
     {
-        class_list.push_back(line);
+        class_list[index++] = line;
+        if (index == NUM_CLASSES)
+        {
+            ROS_ERROR("Too many classes in class list, edit NUM_CLASSES!");
+            throw std::runtime_error("Too many classes in class list, edit NUM_CLASSES!");
+        }
     }
     return class_list;
 }
@@ -76,19 +85,19 @@ void load_resnet(cv::dnn::Net &net, const std::string &net_path, bool is_cuda) {
 }
 #endif
 
-const std::vector<cv::Scalar> boundingBoxColors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
+static const std::array<cv::Scalar, NUM_CLASSES> boundingBoxColors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
 
-const float YOLO_INPUT_WIDTH = 640.0;
-const float YOLO_INPUT_HEIGHT = 640.0;
+static const float YOLO_INPUT_WIDTH = 640.0;
+static const float YOLO_INPUT_HEIGHT = 640.0;
 
 #ifdef USE_RESNET
-const float RESNET_INPUT_WIDTH = 224.0;
-const float RESNET_INPUT_HEIGHT = 224.0;
+static const float RESNET_INPUT_WIDTH = 224.0;
+static const float RESNET_INPUT_HEIGHT = 224.0;
 #endif
 
-float NMS_THRESHOLD = 0.4;
-float CONFIDENCE_THRESHOLD = 0.79;  // filter out boxes with confidence lower than this
-float SCORE_THRESHOLD = 0.8;  // filter out classes with score lower than this
+static float NMS_THRESHOLD = 0.4;
+static float CONFIDENCE_THRESHOLD = 0.79;  // filter out boxes with confidence lower than this
+static float SCORE_THRESHOLD = 0.8;  // filter out classes with score lower than this
 
 struct Detection
 {
@@ -110,7 +119,7 @@ cv::Mat format_yolov5(const cv::Mat &source) {
     return result;
 }
 
-void detect(cv::Mat &image, cv::dnn::Net &yolo, std::vector<Detection> &output, const std::vector<std::string> &className
+void detect(cv::Mat &image, cv::dnn::Net &yolo, std::vector<Detection> &output
 #ifdef USE_RESNET
 , cv::dnn::Net &resnet
 #endif
@@ -140,7 +149,7 @@ void detect(cv::Mat &image, cv::dnn::Net &yolo, std::vector<Detection> &output, 
         float confidence = data[4];
         if (confidence >= CONFIDENCE_THRESHOLD) {
             float * classes_scores = data + 5;
-            cv::Mat scores(1, className.size(), CV_32FC1, classes_scores);
+            cv::Mat scores(1, NUM_CLASSES, CV_32FC1, classes_scores);
             cv::Point class_id;
             double max_class_score;
             minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
@@ -198,7 +207,7 @@ void detect(cv::Mat &image, cv::dnn::Net &yolo, std::vector<Detection> &output, 
     }
 }
 
-void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const std::vector<std::string> &class_list, ros::Publisher &bbox_pub, image_transport::Publisher &image_pub
+void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const std::array<std::string, NUM_CLASSES> &class_list, ros::Publisher &bbox_pub, image_transport::Publisher &image_pub
 #ifdef USE_RESNET
 , cv::dnn::Net &resnet
 #endif
@@ -216,7 +225,7 @@ void image_cb(const sensor_msgs::ImageConstPtr &msg, cv::dnn::Net &yolo, const s
 
     cv::Mat frame = cv_ptr->image;
     std::vector<Detection> output;
-    detect(frame, yolo, output, class_list
+    detect(frame, yolo, output
     #ifdef USE_RESNET
     , resnet
     #endif
@@ -311,7 +320,7 @@ int main(int argc, char **argv)
     ROS_WARN("nms_threshold: %f", NMS_THRESHOLD);
     ROS_WARN("confidence_threshold: %f", CONFIDENCE_THRESHOLD);
 
-    std::vector<std::string> class_list = load_class_list(class_list_path);
+    std::array<std::string, NUM_CLASSES> class_list = load_class_list(class_list_path);
 
     cv::dnn::Net yolo;
     load_yolo(yolo, yolo_path, use_cuda);
