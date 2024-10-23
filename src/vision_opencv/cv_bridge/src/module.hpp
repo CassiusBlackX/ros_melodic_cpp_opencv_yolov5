@@ -33,11 +33,11 @@ int convert_to_CvMat2(const PyObject* o, cv::Mat& m);
 
 PyObject* pyopencv_from(const cv::Mat& m);
 
-// static void * do_numpy_import( )
-static void do_numpy_import( )
+static void * do_numpy_import( )
+// static void do_numpy_import( )
 {
     import_array( );
-    // return nullptr;
+    return nullptr;
 }
 
 #endif

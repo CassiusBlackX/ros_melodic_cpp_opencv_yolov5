@@ -3,6 +3,7 @@ project(image_geometry)
 
 find_package(catkin REQUIRED sensor_msgs)
 find_package(OpenCV REQUIRED)
+include_directories(/usr/local/opencv-4.6.0/include/opencv4)
 
 catkin_package(CATKIN_DEPENDS sensor_msgs
                DEPENDS OpenCV
