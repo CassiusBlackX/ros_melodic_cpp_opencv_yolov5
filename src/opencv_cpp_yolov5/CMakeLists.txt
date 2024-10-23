@@ -61,6 +61,7 @@ add_message_files(
   BoundingBoxes.msg
   BoundingBoxResNet.msg
   BoundingBoxesResNet.msg
+  BoxCenter.msg
   CircleDetectResult.msg
   CircleInfo.msg
 )
@@ -145,7 +146,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/opencv_cpp_yolov5.cpp)
+add_executable(${PROJECT_NAME}_node src/opencv_cpp_yolov5.cpp src/yolo_detector.cpp)
 add_executable(video_stream_node src/video_stream.cpp)
 add_executable(hough_circle_detector_node src/hough_circle_detector.cpp)
 target_link_libraries(video_stream_node ${catkin_LIBRARIES})

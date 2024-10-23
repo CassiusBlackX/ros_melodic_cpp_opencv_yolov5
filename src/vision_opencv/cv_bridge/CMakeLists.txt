@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(cv_bridge)
 
-set(OpenCV_DIR "/usr/loca/opencv4.5.4")
+set(OpenCV_DIR "/usr/local/opencv4.5.4")
 
 find_package(catkin REQUIRED COMPONENTS rosconsole sensor_msgs)
 
