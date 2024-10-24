@@ -56,9 +56,9 @@ public:
             bbox_msg.bounding_boxes.push_back(bbox);
 
             if (classId == 0) {
-                blue_ys[blue_cnt++] = (box.y + box.height) / 2;
+                blue_ys[blue_cnt++] = (bbox.ymin + bbox.ymax) / 2;
             } else if (classId == 1) {
-                chess_xs[chess_cnt++] = (box.x + box.width) / 2;
+                chess_xs[chess_cnt++] = (bbox.xmin + bbox.xmax) / 2;
             }
 
             const auto color = box_colors[classId % box_colors.size()];
@@ -77,6 +77,8 @@ public:
             box_center.y = (blue_ys[0] + blue_ys[1]) / 2;
             box_center.x = (chess_xs[0] + chess_xs[1]) / 2;
             center_pub.publish(box_center);
+            cv::circle(frame, cv::Point(box_center.x, box_center.y), 5, cv::Scalar(0, 255, 0), -1);
+            cv::putText(frame, "Center", cv::Point(box_center.x + 10, box_center.y), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0));
         }
 
         sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();

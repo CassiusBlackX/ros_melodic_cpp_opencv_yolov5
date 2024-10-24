@@ -21,12 +21,13 @@ YoloDetector::YoloDetector(const std::string& class_list_path, const std::string
                             float yolo_input_width=640.0, float yolo_input_height=640.0) : 
                             nms_threshold_(nms_threshold), confidence_threshold_(confidence_threshold), score_threshold_(score_threshold),
                             yolo_input_width_(yolo_input_width), yolo_input_height_(yolo_input_height), 
-                            num_classes(load_class_list(class_list_path)) {
+                            num_classes(get_num_classes(class_list_path)) {
+    load_class_list(class_list_path);
     load_yolo( yolo_path, use_cuda);
     ROS_INFO("YoloDetector initialized");
 }
 
-size_t YoloDetector::load_class_list(const std::string& class_list_path) {
+size_t YoloDetector::get_num_classes(const std::string& class_list_path) {
     std::ifstream ifs(class_list_path);
     if (!ifs.is_open()) {
         ROS_ERROR("Failed to open class list file: %s", class_list_path.c_str());
@@ -39,15 +40,40 @@ size_t YoloDetector::load_class_list(const std::string& class_list_path) {
         if (line.empty()) {
             continue;
         }
-        if (i >= MAX_NUM_CLASSES) {
-            ROS_ERROR("Number of classes exceeds the maximum number of classes: %lu", MAX_NUM_CLASSES);
-            ros::shutdown();
-        }
-        class_list[i] = line;
         i++;
     }
-    ROS_INFO("Loaded %lu classes", num_classes);
+    ifs.close();
     return i;
+}
+
+void YoloDetector::load_class_list(const std::string& class_list_path) {
+    for(int i=0;i<MAX_NUM_CLASSES;i++) {
+        ROS_INFO("original class_list[%d]: %s", i, this->class_list[i].c_str());
+    }
+    std::ifstream ifs(class_list_path);
+    if (!ifs.is_open()) {
+        ROS_ERROR("Failed to open class list file: %s", class_list_path.c_str());
+        ros::shutdown();
+    }
+
+    std::string line;
+    size_t i = 0;
+
+    while (std::getline(ifs, line)) {
+        if (line.empty()) {
+            continue;
+        }
+        if (i < MAX_NUM_CLASSES) {
+            class_list[i] = line;
+            ROS_INFO("Loaded class: %s", line.c_str());
+        } else {
+            ROS_ERROR("Number of classes exceeds the maximum number of classes: %lu",MAX_NUM_CLASSES);
+            ros::shutdown();
+        }
+        i++;
+    }
+    ROS_INFO("Loaded %lu classes", i);
+    ifs.close();
 }
 
 void YoloDetector::load_yolo(const std::string &net_path, bool use_cuda) {
@@ -60,7 +86,6 @@ void YoloDetector::load_yolo(const std::string &net_path, bool use_cuda) {
         yolo.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
         yolo.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
     }
-    ROS_INFO("Loaded YOLO model: %s", net_path.c_str());
 }
 
 void YoloDetector::detect(cv::Mat& image, std::vector<Detection>& output) {

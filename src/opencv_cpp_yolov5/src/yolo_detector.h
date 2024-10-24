@@ -52,7 +52,7 @@ public:
 protected:
     void detect(cv::Mat &image, std::vector<Detection> &output);
     const size_t num_classes;
-    std::array<std::string, MAX_NUM_CLASSES> class_list;
+    std::array<std::string, MAX_NUM_CLASSES> class_list = {"nothing1", "nothing2", "nothing3", "nothing4"};
     cv::dnn::Net yolo;
     const float nms_threshold_;
     const float confidence_threshold_;
@@ -60,7 +60,8 @@ protected:
     const float yolo_input_width_;
     const float yolo_input_height_;
 
-    size_t load_class_list(const std::string& class_list_path);
+    size_t get_num_classes(const std::string& class_list_path);
+    void load_class_list(const std::string& class_list_path);
     void load_yolo(const std::string &net_path, bool use_cuda);
 };
 
