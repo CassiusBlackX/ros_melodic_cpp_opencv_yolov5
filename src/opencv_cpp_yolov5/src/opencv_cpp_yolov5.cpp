@@ -72,14 +72,19 @@ public:
 
         // TODO we can add another parameter here to ask blues and chesses to be at least `param` separated in the image
         opencv_cpp_yolov5::BoxCenter box_center;
+        box_center.header = msg->header;
         if (blue_cnt == 2 && chess_cnt == 2) {
-            box_center.header = msg->header;
+            box_center.flag = true;  // only when all 4 objects are detected will we consider `box_center` valid
             box_center.y = (blue_ys[0] + blue_ys[1]) / 2;
             box_center.x = (chess_xs[0] + chess_xs[1]) / 2;
-            center_pub.publish(box_center);
             cv::circle(frame, cv::Point(box_center.x, box_center.y), 5, cv::Scalar(0, 255, 0), -1);
             cv::putText(frame, "Center", cv::Point(box_center.x + 10, box_center.y), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0));
         }
+        else {
+            box_center.flag = false;
+            box_center.x = box_center.y = -1;
+        }
+        center_pub.publish(box_center);
 
         sensor_msgs::ImagePtr img_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
         image_pub.publish(img_msg);

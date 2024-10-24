@@ -1,0 +1,7 @@
+<launch>
+    <node name="pixel_to_world_node" pkg="opencv_cpp_yolov5" type="pixel_to_world_node">
+    <remap from="/camera/rgb/camera_info" to="/camera/rgb/camera_info" />
+    <remap from="/camera/depth/image_raw" to="/camera/depth/image_raw" />
+    <remap from="opencv_cpp_yolov5/box_center" to="opencv_cpp_yolov5/box_center" />
+    </node>
+</launch>
