@@ -14,20 +14,20 @@
 #include <cv_bridge/cv_bridge.h>
 
 namespace {
-    constexpr size_t MAX_NUM_CLASSES = 4;
+    constexpr size_t MAX_NUM_CLASSES = 11;
     const std::array<cv::Scalar, MAX_NUM_CLASSES> box_colors = {
         // HACK rescale this array to match `MAX_NUM_CLASSES`
         cv::Scalar(255, 255, 0),
         cv::Scalar(0, 255, 255),
         cv::Scalar(255, 0, 255),
         cv::Scalar(0, 255, 0),
-        // cv::Scalar(255, 255, 0),
-        // cv::Scalar(255, 255, 0),
-        // cv::Scalar(255, 255, 0),
-        // cv::Scalar(255, 255, 0),
-        // cv::Scalar(255, 255, 0),
-        // cv::Scalar(255, 255, 0),
-        // cv::Scalar(255, 255, 0),
+        cv::Scalar(255, 255, 0),
+        cv::Scalar(255, 255, 0),
+        cv::Scalar(255, 255, 0),
+        cv::Scalar(255, 255, 0),
+        cv::Scalar(255, 255, 0),
+        cv::Scalar(255, 255, 0),
+        cv::Scalar(255, 255, 0),
     };
 }
 
@@ -52,7 +52,7 @@ public:
 protected:
     void detect(cv::Mat &image, std::vector<Detection> &output);
     const size_t num_classes;
-    std::array<std::string, MAX_NUM_CLASSES> class_list = {"nothing1", "nothing2", "nothing3", "nothing4"};
+    std::array<std::string, MAX_NUM_CLASSES> class_list;
     cv::dnn::Net yolo;
     const float nms_threshold_;
     const float confidence_threshold_;

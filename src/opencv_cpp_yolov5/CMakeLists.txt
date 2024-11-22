@@ -19,7 +19,6 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   mavros_msgs
   sensor_msgs
-  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -150,10 +149,8 @@ include_directories(
 add_executable(${PROJECT_NAME}_node src/opencv_cpp_yolov5.cpp src/yolo_detector.cpp)
 add_executable(video_stream_node src/video_stream.cpp)
 add_executable(hough_circle_detector_node src/hough_circle_detector.cpp)
-add_executable(pixel_to_world_node src/pixel_to_world.cpp)
 target_link_libraries(video_stream_node ${catkin_LIBRARIES})
 target_link_libraries(hough_circle_detector_node ${catkin_LIBRARIES})
-target_link_libraries(pixel_to_world_node ${catkin_LIBRARIES})
 
 
 ## Rename C++ executable without prefix
