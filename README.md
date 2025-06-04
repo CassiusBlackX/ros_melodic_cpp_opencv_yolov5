@@ -5,8 +5,11 @@ this is a catkin workspace which built for visual detection, originally for ros 
 + `vision_opencv` is the official package for [`cv_bridge`](https://github.com/ros-perception/vision_opencv/tree/noetic) compatible, and should not be changed
 + `opencv_cpp_yolov5` is the customed package
   + `yolo_detector` is the basic class for yolo detect, you may inherit it and rewrite its `image_cb` method to customize your own need.
-  + `src/opencv_cpp_yolov5 node` is the node subscribing images and use yolov5 to detect the image
+  + `src/opencv_cpp_yolov5` is the node subscribing images and use yolov5 to detect the image
   + `src/hough_circle_detector` is the node subscribing images and use hough_circle to find the most likely circle in the image
+  + `src/websocket_stream` is the node subscribing images from the topic given in its launch file and publish it using websocket. one can use the `test.html` file in the project root directory to see the published websocket video stream.
+    + note that if more than 1 video streams are needed, one may have to got a few more `test.html` to each subscribe a video stream topic and publish it out. 
+    + Or it is welcomed to modify this  html file to be able to accept several video streams at the same time.
   + `config` is the directory where the yolov5 weights file `*.onnx` and `classes.txt` are placed
     + `rosconsole.config` is the file i used to set ros logger, but failed in my own env.
   + `shell` includes a script to auto start all the nodes needed at a time

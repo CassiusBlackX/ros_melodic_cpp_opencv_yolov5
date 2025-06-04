@@ -9,6 +9,7 @@ project(opencv_cpp_yolov5)
 ## is used, also find other catkin packages
 find_package(OpenCV 4 REQUIRED)
 include_directories(/usr/local/opencv-4.6.0/include/opencv4)
+find_package(OpenSSL REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
@@ -56,7 +57,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
 add_message_files(
-  FILES 
+  FILES
   BoundingBox.msg
   BoundingBoxes.msg
   BoundingBoxResNet.msg
@@ -149,8 +150,10 @@ include_directories(
 add_executable(${PROJECT_NAME}_node src/opencv_cpp_yolov5.cpp src/yolo_detector.cpp)
 add_executable(video_stream_node src/video_stream.cpp)
 add_executable(hough_circle_detector_node src/hough_circle_detector.cpp)
+add_executable(websocket_stream_node src/websocket_stream.cpp)
 target_link_libraries(video_stream_node ${catkin_LIBRARIES})
 target_link_libraries(hough_circle_detector_node ${catkin_LIBRARIES})
+target_link_libraries(websocket_stream_node ${catkin_LIBRARIES} ${OPENSSL_LIBRARIES})
 
 
 ## Rename C++ executable without prefix

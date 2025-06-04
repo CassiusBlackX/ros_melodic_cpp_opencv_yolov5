@@ -1,0 +1,8 @@
+<launch>
+    <!-- WebSocket stream Node -->
+    <node name="websocket_stream_node" pkg="opencv_cpp_yolov5" type="websocket_stream_node">
+        <!-- change the port if conflicted with any other port running -->
+        <param name="port" value="45445" />
+        <remap from="/usb_cam/image_raw" to="/usb_cam/image_raw" />
+    </node>
+</launch>

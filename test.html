@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Video Stream</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        #video-container {
+            margin-top: 20px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        #video-stream {
+            display: block;
+            background-color: #000;
+        }
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Video Stream</h1>
+    <div id="video-container">
+        <img id="video-stream" width="640" height="480" alt="Video Stream">
+    </div>
+    <div id="status">Connecting to server...</div>
+    <button id="toggle-btn">Stop Stream</button>
+
+    <script>
+        const videoElement = document.getElementById('video-stream');
+        const statusElement = document.getElementById('status');
+        const toggleBtn = document.getElementById('toggle-btn');
+        
+        let socket;
+        let streaming = true;
+        
+        function connectWebSocket() {
+            // TODO: Replace with your server's IP here!
+            const wsUrl = `ws://192.168.110.83:45445`;
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function(e) {
+                statusElement.textContent = "Connected: Receiving video stream";
+                statusElement.style.color = "green";
+            };
+            
+            socket.onmessage = function(event) {
+                if (event.data instanceof Blob) {
+                    const blobUrl = URL.createObjectURL(event.data);
+                    videoElement.src = blobUrl;
+                    // Revoke the previous URL to free memory
+                    if (videoElement.currentSrc && videoElement.currentSrc !== blobUrl) {
+                        URL.revokeObjectURL(videoElement.currentSrc);
+                    }
+                } else {
+                    // For browsers that don't support binary Blob directly
+                    const blob = new Blob([event.data], {type: 'image/jpeg'});
+                    const blobUrl = URL.createObjectURL(blob);
+                    videoElement.src = blobUrl;
+                    if (videoElement.currentSrc && videoElement.currentSrc !== blobUrl) {
+                        URL.revokeObjectURL(videoElement.currentSrc);
+                    }
+                }
+            };
+            
+            socket.onclose = function(event) {
+                if (event.wasClean) {
+                    statusElement.textContent = `Connection closed cleanly, code=${event.code} reason=${event.reason}`;
+                } else {
+                    statusElement.textContent = 'Connection died';
+                }
+                statusElement.style.color = "red";
+                
+                // Try to reconnect after 2 seconds
+                if (streaming) {
+                    setTimeout(connectWebSocket, 2000);
+                }
+            };
+            
+            socket.onerror = function(error) {
+                statusElement.textContent = `WebSocket error: ${error.message}`;
+                statusElement.style.color = "red";
+            };
+        }
+        
+        toggleBtn.addEventListener('click', function() {
+            streaming = !streaming;
+            
+            if (streaming) {
+                toggleBtn.textContent = 'Stop Stream';
+                connectWebSocket();
+            } else {
+                toggleBtn.textContent = 'Start Stream';
+                if (socket) {
+                    socket.close();
+                }
+                statusElement.textContent = 'Stream stopped';
+                statusElement.style.color = "black";
+            }
+        });
+        
+        // Initial connection
+        connectWebSocket();
+    </script>
+</body>
+</html>
